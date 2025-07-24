@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Text,
   TextField,
@@ -20,6 +20,32 @@ async function shopifyQuery(query, variables = {}) {
   return res.json();
 }
 
+async function getPinnedCollections() {
+  const query = `
+    query PinnedCollections($first: Int!) {
+      collections(first: $first) {
+        edges {
+          node {
+            id
+            title
+            handle
+            metafield(namespace: "custom", key: "pinned") {
+              value
+            }
+          }
+        }
+      }
+    }
+  `;
+  const data = await shopifyQuery(query, { first: 50 });
+  console.log("RAW collection pinned response:", data);
+
+  return data.data.collections.edges.filter(
+    edge => edge.node.metafield?.value === "true"
+  );
+}
+
+
 async function searchCollections(searchTerm) {
   const query = `
     query SearchCollections($first: Int!, $query: String!) {
@@ -30,6 +56,9 @@ async function searchCollections(searchTerm) {
             title
             handle
             updatedAt
+            metafield(namespace: "custom", key: "pinned") {
+              value
+            }
           }
         }
       }
@@ -40,6 +69,49 @@ async function searchCollections(searchTerm) {
     query: `title:${searchTerm}*`,
   });
   return data.data.collections.edges;
+}
+
+
+
+async function getAllCollections(first = 50, after = null) {
+  const query = `
+    query GetCollections($first: Int!, $after: String) {
+      collections(first: $first, after: $after) {
+        edges {
+          node {
+            id
+            title
+            handle
+            metafield(namespace: "custom", key: "pinned") {
+              value
+            }
+          }
+          cursor
+        }
+        pageInfo {
+          hasNextPage
+          endCursor
+        }
+      }
+    }
+  `;
+  return shopifyQuery(query, { first, after });
+}
+
+async function fetchAllCollections() {
+  let allCollections = [];
+  let after = null;
+  let hasNextPage = true;
+
+  while (hasNextPage) {
+    const data = await getAllCollections(50, after);
+    const edges = data.data.collections.edges;
+    allCollections.push(...edges);
+    hasNextPage = data.data.collections.pageInfo.hasNextPage;
+    after = data.data.collections.pageInfo.endCursor;
+  }
+
+  return allCollections;
 }
 
 async function getCollectionProductsById(collectionId, first = 5, after = null) {
@@ -79,6 +151,8 @@ async function getCollectionProductsById(collectionId, first = 5, after = null) 
 
 const Modal = () => {
   const [searchTerm, setSearchTerm] = useState('');
+  const [pinnedCollections, setPinnedCollections] = useState([]);
+  const [otherCollections, setOtherCollections] = useState([]);
   const [collections, setCollections] = useState([]);
   const [selectedCollection, setSelectedCollection] = useState(null);
   const [products, setProducts] = useState([]);
@@ -88,12 +162,44 @@ const Modal = () => {
 
   const log = (msg) => setDebug((prev) => [...prev, `[${new Date().toLocaleTimeString()}] ${msg}`]);
 
+  useEffect(() => {
+    (async () => {
+      setLoading(true);
+      log('Fetching all collections...');
+      try {
+        const all = await fetchAllCollections();
+        const pinned = all.filter(c => c.node.metafield?.value === "true");
+        const others = all.filter(c => c.node.metafield?.value !== "true");
+        setPinnedCollections(pinned);
+        setOtherCollections(others);
+        log(`Loaded ${pinned.length} pinned and ${others.length} other collections`);
+      } catch (e) {
+        log(`Error fetching collections: ${e.message}`);
+      }
+      setLoading(false);
+    })();
+  }, []);
+
   const handleSearch = async () => {
     setLoading(true);
     log(`Searching collections with term: "${searchTerm}"`);
+    if (!searchTerm.trim()) {
+      log("Search is empty, restoring full collection list...");
+      const all = await fetchAllCollections();
+      const pinned = all.filter(c => c.node.metafield?.value === "true");
+      const others = all.filter(c => c.node.metafield?.value !== "true");
+      setPinnedCollections(pinned);
+      setOtherCollections(others);
+      return setLoading(false);
+    }
+    
     try {
       const results = await searchCollections(searchTerm);
-      setCollections(results);
+      const pinned = results.filter(c => c.node.metafield?.value === "true");
+      const others = results.filter(c => c.node.metafield?.value !== "true");
+  
+      setPinnedCollections(pinned);
+      setOtherCollections(others);
       setSelectedCollection(null);
       setProducts([]);
       log(`Found ${results.length} collections`);
@@ -102,6 +208,7 @@ const Modal = () => {
     }
     setLoading(false);
   };
+  
 
   const openCollection = async (collectionId) => {
     setLoading(true);
@@ -156,14 +263,28 @@ const Modal = () => {
 
           {!selectedCollection ? (
             <>
-              <Text> Collections </Text>
-              {collections.map((edge) => (
-                <POSBlock key={edge.node.id}>
-                  <POSBlockRow onPress={() => openCollection(edge.node.id)}>
-                    <Text>• {edge.node.title}</Text>
-                  </POSBlockRow>
-                </POSBlock>
-              ))}
+              {pinnedCollections.length > 0 && (
+                <>
+                  <Text>=== Pinned Collections new ===</Text>
+                  {pinnedCollections.map((edge) => (
+                    <POSBlock key={edge.node.id}>
+                      <POSBlockRow onPress={() => openCollection(edge.node.id)}>
+                        <Text>• {edge.node.title}</Text>
+                      </POSBlockRow>
+                    </POSBlock>
+                  ))}
+                </>
+              )}
+
+            <Text>=== Collections new ===</Text>
+            {otherCollections.map((edge) => (
+              <POSBlock key={edge.node.id}>
+                <POSBlockRow onPress={() => openCollection(edge.node.id)}>
+                  <Text>• {edge.node.title}</Text>
+                </POSBlockRow>
+              </POSBlock>
+            ))}
+
             </>
           ) : (
             <>
