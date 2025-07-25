@@ -12,6 +12,19 @@ import {
 } from '@shopify/ui-extensions-react/point-of-sale';
 
 
+// async function fetchProxyCollections() {
+//   try {
+//     const res = await fetch("https://shiny-hornets-drum.loca.lt/proxy/collections");
+//     const data = await res.json();
+//     console.log("Proxy response:", data);
+//     return data;
+//   } catch (e) {
+//     console.error("Error fetching from proxy:", e);
+//     return null;
+//   }
+// }
+
+
 async function shopifyQuery(query, variables = {}) {
   const res = await fetch('shopify:admin/api/graphql.json', {
     method: 'POST',
@@ -20,30 +33,30 @@ async function shopifyQuery(query, variables = {}) {
   return res.json();
 }
 
-async function getPinnedCollections() {
-  const query = `
-    query PinnedCollections($first: Int!) {
-      collections(first: $first) {
-        edges {
-          node {
-            id
-            title
-            handle
-            metafield(namespace: "custom", key: "pinned") {
-              value
-            }
-          }
-        }
-      }
-    }
-  `;
-  const data = await shopifyQuery(query, { first: 50 });
-  console.log("RAW collection pinned response:", data);
+// async function getPinnedCollections() {
+//   const query = `
+//     query PinnedCollections($first: Int!) {
+//       collections(first: $first) {
+//         edges {
+//           node {
+//             id
+//             title
+//             handle
+//             metafield(namespace: "custom", key: "pinned") {
+//               value
+//             }
+//           }
+//         }
+//       }
+//     }
+//   `;
+//   const data = await shopifyQuery(query, { first: 50 });
+//   console.log("RAW collection pinned response:", data);
 
-  return data.data.collections.edges.filter(
-    edge => edge.node.metafield?.value === "true"
-  );
-}
+//   return data.data.collections.edges.filter(
+//     edge => edge.node.metafield?.value === "true"
+//   );
+// }
 
 
 async function searchCollections(searchTerm) {
@@ -153,7 +166,7 @@ const Modal = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [pinnedCollections, setPinnedCollections] = useState([]);
   const [otherCollections, setOtherCollections] = useState([]);
-  const [collections, setCollections] = useState([]);
+  // const [collections, setCollections] = useState([]);
   const [selectedCollection, setSelectedCollection] = useState(null);
   const [products, setProducts] = useState([]);
   const [pageInfo, setPageInfo] = useState(null);
@@ -179,6 +192,7 @@ const Modal = () => {
       setLoading(false);
     })();
   }, []);
+  
 
   const handleSearch = async () => {
     setLoading(true);
@@ -250,43 +264,48 @@ const Modal = () => {
   return (
     <Navigator>
       <Screen name="Main" title="Collections Debug">
-        <ScrollView>
-          <TextField
-            label="Search Collection"
-            value={searchTerm}
-            onChange={setSearchTerm}
-            onSubmit={handleSearch}
-          />
-          <Button onPress={handleSearch}>Search</Button>
+      <ScrollView style={{ padding: 10 }}>
+  <TextField
+    label="Search Collection"
+    value={searchTerm}
+    onChange={setSearchTerm}
+    onSubmit={handleSearch}
+  />
+  <Button kind="primary" onPress={handleSearch}>
+    Search
+  </Button>
 
-          {loading && <Text>Loading...</Text>}
+  {loading && <Text>Loading...</Text>}
 
-          {!selectedCollection ? (
-            <>
-              {pinnedCollections.length > 0 && (
-                <>
-                  <Text>=== Pinned Collections new ===</Text>
-                  {pinnedCollections.map((edge) => (
-                    <POSBlock key={edge.node.id}>
-                      <POSBlockRow onPress={() => openCollection(edge.node.id)}>
-                        <Text>• {edge.node.title}</Text>
-                      </POSBlockRow>
-                    </POSBlock>
-                  ))}
-                </>
-              )}
+  {!selectedCollection ? (
+    <>
+      {pinnedCollections.length > 0 && (
+        <>
+          <Text style={{ fontWeight: 'bold', fontSize: 18, marginVertical: 8 }}>
+            Pinned Collections
+          </Text>
+          {pinnedCollections.map((edge) => (
+            <POSBlock key={edge.node.id} style={{ marginBottom: 6 }}>
+              <POSBlockRow onPress={() => openCollection(edge.node.id)}>
+                <Text>{edge.node.title}</Text>
+              </POSBlockRow>
+            </POSBlock>
+          ))}
+        </>
+      )}
 
-            <Text>=== Collections new ===</Text>
-            {otherCollections.map((edge) => (
-              <POSBlock key={edge.node.id}>
-                <POSBlockRow onPress={() => openCollection(edge.node.id)}>
-                  <Text>• {edge.node.title}</Text>
-                </POSBlockRow>
-              </POSBlock>
-            ))}
-
-            </>
-          ) : (
+      <Text style={{ fontWeight: 'bold', fontSize: 18, marginVertical: 8 }}>
+        All Collections
+      </Text>
+      {otherCollections.map((edge) => (
+        <POSBlock key={edge.node.id} style={{ marginBottom: 6 }}>
+          <POSBlockRow onPress={() => openCollection(edge.node.id)}>
+            <Text>{edge.node.title}</Text>
+          </POSBlockRow>
+        </POSBlock>
+      ))}
+    </>
+  ) : (
             <>
               <Text> Products in {selectedCollection.title} </Text>
               {products.map((p) => (
@@ -297,18 +316,18 @@ const Modal = () => {
                 </POSBlock>
               ))}
               {pageInfo?.hasNextPage && (
-                <Button onPress={loadNextPage}>Load more</Button>
+                <Button kind="secondary" onPress={loadNextPage}>Load more</Button>
               )}
-              <Button onPress={() => setSelectedCollection(null)}>
+              <Button kind="secondary" onPress={() => setSelectedCollection(null)}>
                 Back to Collections
               </Button>
             </>
           )}
 
-          <Text>=== Debug log ===</Text>
+          {/* <Text>=== Debug log ===</Text>
           {debug.map((msg, i) => (
             <Text key={i}>{msg}</Text>
-          ))}
+          ))} */}
         </ScrollView>
       </Screen>
     </Navigator>

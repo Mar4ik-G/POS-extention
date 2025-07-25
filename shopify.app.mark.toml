@@ -1,7 +1,7 @@
 # Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
 
 client_id = "d30ca92821912858c3c70f8665ce9f0c"
-application_url = "https://immense-neat-garfish.ngrok-free.app"
+application_url = "https://shiny-hornets-drum.loca.lt"
 embedded = true
 name = "pos-app"
 handle = "pos-app-68"
@@ -23,16 +23,16 @@ scopes = "write_products,read_products,read_customers"
 
 [auth]
 redirect_urls = [
-  "https://immense-neat-garfish.ngrok-free.app/auth/callback",
-  "https://immense-neat-garfish.ngrok-free.app/auth/shopify/callback",
-  "https://immense-neat-garfish.ngrok-free.app/api/auth/callback"
+  "https://shiny-hornets-drum.loca.lt/auth/callback",
+  "https://shiny-hornets-drum.loca.lt/auth/shopify/callback",
+  "https://shiny-hornets-drum.loca.lt/api/auth/callback"
 ]
 
 [pos]
 embedded = false
 
 [app_proxy]
-url = "https://immense-neat-garfish.ngrok-free.app"
+url = "https://shiny-hornets-drum.loca.lt"
 subpath = "proxy"
 prefix = "apps"
 

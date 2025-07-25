@@ -3,7 +3,6 @@ import { authenticate } from "../shopify.server";
 import { getCollections } from "./getCollections.server";
 
 export async function loader({ request }) {
-  console.log("HERE IN PROXY COLLECTIONS ROUTE");
   
   if (request.method === "OPTIONS") {
     return new Response(null, {
@@ -17,20 +16,13 @@ export async function loader({ request }) {
   }
 
   try {
-    // const { admin } = await authenticate.admin(request);
-    // const collections = await getCollections(admin);
-
-    // return json(
-    //   { data: { collections: { edges: collections } } },
-    //   {
-    //     headers: { "Access-Control-Allow-Origin": "*" },
-    //   }
-    // );
+    const { admin } = await authenticate.admin(request);
+    
+    const collections = await getCollections(admin);
     return json(
-      { ok: true, time: new Date().toISOString() },
+      { ok: true, data: collections },
       {
         headers: {
-          "ngrok-skip-browser-warning": "69420",  // головний хедер
           "Access-Control-Allow-Origin": "*",
         },
       }
